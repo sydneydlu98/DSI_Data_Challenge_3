@@ -25,6 +25,7 @@ library(knitr)
 library(readxl)
 library(tidyr)
 library(na.tools)
+library(stringr)
 
 ## read in the data 
 coffee_ratings <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv')
@@ -47,7 +48,7 @@ Write a function that returns a table with the mean and standard deviation of th
 mean_sd <- function(x){
   mean <- mean(x)
   sd <- length(x)
-  return(paste(round(mean, 2), round(sd, 2)))
+  return(paste("mean", round(mean, 2), "sd", round(sd, 2)))
 }
 ```
 
@@ -56,10 +57,12 @@ function2 <- function(data, x){
   data %>% 
     group_by(country_of_origin) %>%
     summarise(across(aroma:moisture, mean_sd)) %>%
+    rename_with(str_to_title) %>%
+    rename_with(~gsub("_", " ", .x)) %>%
     knitr::kable(format = "markdown")
 }
 
-function2(coffee_ratings, "China")
+function2(coffee_ratings, "country_of_origin")
 ```
 
 ```{r, warning=FALSE}
@@ -67,11 +70,7 @@ function2(coffee_ratings, "China")
 ```
 
 ```{r}
-iris %>%
-  select(species, country_of_origin, binned_mean_altitude) %>%
-  map(mean_sd) %>%
-  bind_rows()
-  
+
 ```
 
 ## Problem 2
