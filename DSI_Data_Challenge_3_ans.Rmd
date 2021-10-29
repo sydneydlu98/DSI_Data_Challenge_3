@@ -21,6 +21,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr) 
 library(dplyr)
 library(kableExtra)
+library(knitr)
+library(readxl)
+library(tidyr)
+library(na.tools)
 
 ## read in the data 
 coffee_ratings <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv')
@@ -40,44 +44,46 @@ Write a function that returns a table with the mean and standard deviation of th
 * Using map to calculate tables for the three groups (species, country of origin, binned mean altitude in meters) in one step.
 
 ```{r, warning=FALSE}
-function1 <- function(data){
-  data %>%
-    group_by(species, country_of_origin, altitude_mean_meters) %>%
-    summarise(paste(mean = round(mean(aroma:moisture), 1),
-                    sd = round(sd(aroma:moisture), 1)))
+mean_sd <- function(x){
+  mean <- mean(x)
+  sd <- length(x)
+  return(paste(round(mean, 2), round(sd, 2)))
 }
-
-function1(coffee_ratings)  
 ```
 
 ```{r, warning=FALSE}
-function2 <- function(data){
-  data %>%
-    group_by(species, country_of_origin, altitude_mean_meters) %>%
-    summarise(paste(mean = round(mean(aroma:moisture), 1),
-                    sd = round(sd(aroma:moisture), 1))) %>%
-    knitr::kable()
+function2 <- function(data, x){
+  data %>% 
+    group_by(country_of_origin) %>%
+    summarise(across(aroma:moisture, mean_sd)) %>%
+    knitr::kable(format = "markdown")
 }
 
-function2(coffee_ratings)
+function2(coffee_ratings, "China")
 ```
 
 ```{r, warning=FALSE}
-function3 <- function(data){
-  data %>%
-    mutate_all(~replace(., . == 0, NA))
+
+```
+
+```{r}
+iris %>%
+  select(species, country_of_origin, binned_mean_altitude) %>%
+  map(mean_sd) %>%
+  bind_rows()
   
-}
-
-function3(coffee_ratings) 
 ```
 
 ## Problem 2
 
-Write a function that makes a scatterplot of any two variables from the columns aroma through moisture and colors the points by a particular grouping. Make the plot for (1) aroma versus flavor colored by species and (2) balance versus body colored by binned mean altitude. (Hint: Remove outliers to make a more compelling plot!)
+Write a function that makes a scatter plot of any two variables from the columns aroma through moisture and colors the points by a particular grouping. Make the plot for (1) aroma versus flavor colored by species and (2) balance versus body colored by binned mean altitude. (Hint: Remove outliers to make a more compelling plot!)
 
 * Write a function that plots two variables from a data frame and colors by group. (Hint: Use geom_jitter() with alpha blending to make a more aesthetically appealing plot.)
 
 * Use pmap to iterate over a list of function arguments to produce two plots:
   + Aroma versus flavor colored by species
   + Balance versus body colored by binned mean altitude
+  
+  ```{r}
+  
+  ```
