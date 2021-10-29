@@ -26,6 +26,8 @@ library(readxl)
 library(tidyr)
 library(na.tools)
 library(stringr)
+library(elementR)
+library(tidyverse)
 
 ## read in the data 
 coffee_ratings <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv')
@@ -48,17 +50,19 @@ Write a function that returns a table with the mean and standard deviation of th
 mean_sd <- function(x){
   mean <- mean(x)
   sd <- length(x)
-  return(paste("mean", round(mean, 2), "sd", round(sd, 2)))
+  return(paste(round(mean, 2), "±", round(sd, 2)))
 }
 ```
 
 ```{r, warning=FALSE}
-function2 <- function(data, x){
+function2 <- function(data, group){
   data %>% 
-    group_by(country_of_origin) %>%
-    summarise(across(aroma:moisture, mean_sd)) %>%
+    group_by(get(group)) %>%
+    summarise(across(aroma:moisture, 
+                     mean_sd)) %>%
     rename_with(str_to_title) %>%
     rename_with(~gsub("_", " ", .x)) %>%
+    rename("Variable" = "Get(Group)") %>%
     knitr::kable(format = "markdown")
 }
 
@@ -66,11 +70,21 @@ function2(coffee_ratings, "country_of_origin")
 ```
 
 ```{r, warning=FALSE}
+coffee_ratings_clean <- coffee_ratings %>%
+  mutate(across(everything(), 
+                str_replace_na, 
+                "Missing"))
+coffee_ratings_clean$altitude_mean_meters[coffee_ratings_clean$altitude_mean_meters > 8848] <- "Missing"
+cut2()
+
+
+
 
 ```
 
 ```{r}
-
+coffee_ratings_clean %>%
+  map_dfr(extract, c("species", "county_of_origin", "binned_mean_altitude"))
 ```
 
 ## Problem 2
@@ -83,6 +97,18 @@ Write a function that makes a scatter plot of any two variables from the columns
   + Aroma versus flavor colored by species
   + Balance versus body colored by binned mean altitude
   
-  ```{r}
-  
-  ```
+```{r}
+
+scatterplot <- function(var_1, var_2, color){
+  ggplot(coffee_ratings, aes(x = get(var_1),
+                             y = get(var_2),
+                             col = color)) +
+    geom_jitter(aes(alpha = 0.4,
+                    na.rm = TRUE)) +
+    labs(x = var_1,
+         y = var_2,
+         col = color)
+}
+
+scatterplot("aroma", "moisture", "color")
+```
