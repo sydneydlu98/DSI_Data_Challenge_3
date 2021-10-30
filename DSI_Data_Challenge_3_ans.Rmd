@@ -46,7 +46,7 @@ Write a function that returns a table with the mean and standard deviation of th
 
 * Using map to calculate tables for the three groups (species, country of origin, binned mean altitude in meters) in one step.
 
-```{r, warning=FALSE}
+```{r, warning=FALSE，results='asis'}
 ## function returns the mean and standard deviation of a vector
 ## x is the vector
 mean_sd <- function(x) {
