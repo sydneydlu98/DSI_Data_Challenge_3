@@ -26,7 +26,7 @@ library(readxl)
 library(tidyr)
 library(na.tools)
 library(stringr)
-library(elementR)
+library(Hmisc)
 library(tidyverse)
 
 ## read in the data 
@@ -47,44 +47,55 @@ Write a function that returns a table with the mean and standard deviation of th
 * Using map to calculate tables for the three groups (species, country of origin, binned mean altitude in meters) in one step.
 
 ```{r, warning=FALSE}
-mean_sd <- function(x){
+## function returns the mean and standard deviation of a vector
+## x is the vector
+mean_sd <- function(x) {
   mean <- mean(x)
   sd <- length(x)
+  ## returns the mean and standard deviation
   return(paste(round(mean, 2), "±", round(sd, 2)))
 }
-```
 
-```{r, warning=FALSE}
-function2 <- function(data, group){
-  data %>% 
-    group_by(get(group)) %>%
+## write a function returns the mean and standard deviation
+## of the aroma through moisture columns over a specific grouping
+operator <- function(df, x) {
+  df %>%
+    rename(group = all_of(x)) %>%
+    group_by(group) %>%
     summarise(across(aroma:moisture, 
                      mean_sd)) %>%
-    rename_with(str_to_title) %>%
-    rename_with(~gsub("_", " ", .x)) %>%
-    rename("Variable" = "Get(Group)") %>%
+    rename_with( ~ gsub("_", " ", .x)) %>%
+    rename("variable" = "group") %>%
+    ## make a table in Rmarkdown
     knitr::kable(format = "markdown")
 }
 
-function2(coffee_ratings, "country_of_origin")
-```
-
-```{r, warning=FALSE}
+## Clean the coffee ratings data frame
 coffee_ratings_clean <- coffee_ratings %>%
-  mutate(across(everything(), 
-                str_replace_na, 
-                "Missing"))
-coffee_ratings_clean$altitude_mean_meters[coffee_ratings_clean$altitude_mean_meters > 8848] <- "Missing"
-cut2()
+  ## put a ‘Missing’ for NAs for species
+  mutate(species = if_else(is.na(species),
+                           "Missing",
+                           species)) %>%
+  # put a ‘Missing’ for NAs for country_of_origin
+  mutate(country_of_origin = if_else(is.na(country_of_origin),
+                                     "Missing",
+                                     country_of_origin)) %>%
+  ## binning the mean altitude meters variable up to 8848
+  ## put any impossible values as missing
+  mutate(binned_mean_altitude = cut2(
+    as.numeric(coffee_ratings$altitude_mean_meters),
+    c(800, 1500, 2000, 8848))) %>%
+  mutate(binned_mean_altitude = as.character(binned_mean_altitude)) %>%
+  # clean the mean altitude meters columns
+  mutate(binned_mean_altitude = ifelse(is.na(binned_mean_altitude),
+                                       "Missing",
+                                       binned_mean_altitude))
 
-
-
-
-```
-
-```{r}
-coffee_ratings_clean %>%
-  map_dfr(extract, c("species", "county_of_origin", "binned_mean_altitude"))
+## calculate tables for the three groups
+## (species, country of origin, binned mean altitude in meters)
+map(c("species", "country_of_origin", "binned_mean_altitude"),
+    operator,
+    df = coffee_ratings_clean)
 ```
 
 ## Problem 2
@@ -96,19 +107,34 @@ Write a function that makes a scatter plot of any two variables from the columns
 * Use pmap to iterate over a list of function arguments to produce two plots:
   + Aroma versus flavor colored by species
   + Balance versus body colored by binned mean altitude
-  
-```{r}
 
-scatterplot <- function(var_1, var_2, color){
-  ggplot(coffee_ratings, aes(x = get(var_1),
-                             y = get(var_2),
-                             col = color)) +
-    geom_jitter(aes(alpha = 0.4,
+**(1) aroma versus flavor colored by species**  
+
+```{r, warning=FALSE}
+## function that plots two variables from a data frame and colors by group
+scatterplot <- function(var_1, var_2, group) {
+  coffee_ratings_clean %>%
+    ggplot(aes(
+      x = get(var_1),
+      y = get(var_2),
+      col = get(group)
+    )) +
+    ## use geom_jitter() with alpha blending to make a aesthetically appealing plot.
+    geom_jitter(aes(alpha = 0.2,
                     na.rm = TRUE)) +
+    xlim(5, 9.5) +
+    ylim(5.5, 9) +
     labs(x = var_1,
          y = var_2,
-         col = color)
+         col = group)
 }
 
-scatterplot("aroma", "moisture", "color")
+## Use pmap() to iterate over a list of function arguments to produce two plots
+## (1) plot aroma versus flavor colored by species
+plot_1 = pmap(list("aroma", "flavor", "country_of_origin"), scatterplot)
+## (2) plot balance versus body colored by binned mean altitude
+plot_2 = pmap(list("balance", "body", "binned_mean_altitude"), scatterplot)
+
+plot_1
+plot_2
 ```
